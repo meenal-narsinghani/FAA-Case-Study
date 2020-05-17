@@ -1,0 +1,419 @@
+---
+title: "FAA Dataset Analysis"
+subtitle: "Analysis of Aircraft Overruns"
+author: "Meenal Narsinghani"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+    toc_depth: 6
+    toc_float: true
+    collapsed: false
+---
+
+***
+
+### Initial Setup
+
+
+#### Loading the libraries
+```{r, message=FALSE, error=FALSE, warning=FALSE}
+library(gdata)
+library(readxl)
+library(tidyverse)
+library(dplyr)
+library(MASS)
+library(gridExtra)
+```
+
+
+#### Importing the dataset
+```{r}
+faa1 <- read_excel("FAA1.xls")
+head(faa1)
+
+faa2 <- read_excel("FAA2.xls")
+head(faa2)
+```
+
+***
+
+### Analytical dataset creation
+
+#### Checking the structure of the datasets
+```{r}
+## For data set FAA1
+str(faa1)   ## Sample size: 800; Number of variables = 8
+
+## For data set FAA2
+str(faa2)   ## Sample size: 150; Number of variables = 7
+
+## Dataset FAA2 does not have "Duration" variable. 
+
+```
+
+
+#### Merging the datasets
+```{r}
+#Since FAA2 has one less variable, creating a new column "Duration" in FAA2 and setting it to NA
+
+faa2$duration <- NA
+merged_faa <- rbind(faa1, faa2)
+head(merged_faa)
+
+merged_faa$aircraft <- as.factor(merged_faa$aircraft)
+str(merged_faa)   ##Total number of observations = 950; Number of variables = 8
+```
+
+
+#### Duplicate records treatment
+```{r}
+##Checking if duplicates exist
+nrow(merged_faa[duplicated(merged_faa[,c(1,3:8)]),])    ## 100 duplicate observations found
+
+##Removing duplicated rows
+merged_faa_distinct <- merged_faa[!duplicated(merged_faa[,c(1,3:8)]),]
+nrow(merged_faa_distinct)
+
+```
+
+
+#### Summary statistics
+```{r}
+str(merged_faa_distinct)
+#Number of observations = 850
+#Number of variables = 7
+
+#Summary statistics for each variable
+summary(merged_faa_distinct)
+
+```
+
+
+    **Important observations**
+    
+    1. NAs in speed air
+    2. Negative height
+    3. unsually large range for distance variable : >6000
+    4. Speed_ground < 30 : abnormal
+    5. Max speed_ground, speed_air > 140
+    6. Duration < 40min
+  
+
+#### Data Cleaning and further exploration
+
+**Checking for abnormal values in the data set. We will remove the rows that contain any 'abnormal values'**
+
+    1. Negative value for "Height" variable or where "Height" < 6
+    2. Observations with speed_air = NA
+    3. Observations with speed_air or speed_ground > 140
+    4. Observation with speed_air or speed_ground < 30
+    5. Distance > 6000ft
+
+
+```{r}
+faa_data_cleaned <- merged_faa_distinct %>% 
+                filter(duration > 40 | is.na(duration)) %>%
+                  filter((speed_ground >= 30 && speed_ground <= 140) | is.na(speed_ground))%>%
+                    filter((speed_air >= 30 && speed_air <= 140) | is.na(speed_air)) %>% 
+                      filter(height >= 6 | is.na(height)) %>% 
+                        filter(distance < 6000 | is.na(distance))
+
+nrow(faa_data_cleaned)   #833 obs
+```
+
+Total rows removed = 17
+
+*Retaining observations with NAs as dataset FAA2 has no "Duration" column. Dropping all the observations where any missing value is present will render dataset FAA2 as useless.*
+
+***
+
+
+### Exploratory Data Analysis
+```{r}
+hist(faa_data_cleaned$no_pasg, main = "Histogram of No. of passengers", xlab = "")
+hist(faa_data_cleaned$speed_ground, main = "Histogram of Speed_Ground", xlab = "")
+hist(faa_data_cleaned$speed_air, main = "Histogram of Speed_Air", xlab = "" )
+hist(faa_data_cleaned$duration,main = "Histogram of Duration", xlab = "")
+hist(faa_data_cleaned$height, main = "Histogram of Height", xlab = "")
+hist(faa_data_cleaned$pitch, main = "Histogram of Pitch", xlab = "")
+hist(faa_data_cleaned$distance, main = "Histogram of Distance", xlab = "")
+
+```
+
+    ** A quick summary of what we have observed so far from our analysis:**
+    
+    1. 17 observations corresponding to abnormal data values were omitted from the cleaned data set
+    2. Columns 'Duration' and 'Speed_Air' has some missing values
+    3. From the histograms we observe that distributions of all variables is symmetric(normal), except for "Speed_Air" and "Distance"
+    4. There is no observation in the data set where the value of "Speed_Air" is below 90 (allowed min = 30)
+    5. Distribution of "Speed_Air" and "Distance" is left skewed
+
+***  
+
+### Factor Analysis
+
+**Initial analysis for identifying important factors that impact the response variable 'landing distance'**
+
+Computing the pairwise correlation between the landing distance and each factor X. 
+
+```{r}
+cor_with_dist <- round(cor(faa_data_cleaned$distance, faa_data_cleaned[,-1],use = "pairwise.complete.obs"),2)
+
+cor_with_dist
+
+```
+
+
+Plotting scatter plots to represent the relationship between the response variable - `distance` and different predictor variables
+
+```{r}
+
+scatter1 <- ggplot(faa_data_cleaned, aes( x = duration, y = distance)) + geom_point()
+scatter2 <- ggplot(faa_data_cleaned, aes( x = no_pasg, y = distance)) + geom_point()
+scatter3 <- ggplot(faa_data_cleaned, aes( x = speed_ground, y = distance)) + geom_point()
+scatter4 <- ggplot(faa_data_cleaned, aes( x = speed_air, y = distance)) + geom_point()
+scatter5 <- ggplot(faa_data_cleaned, aes( x = height, y = distance)) + geom_point()
+scatter6 <- ggplot(faa_data_cleaned, aes( x = pitch, y = distance)) + geom_point()
+
+grid.arrange(scatter1,scatter2,scatter3, scatter4, scatter5, scatter6, nrow = 2, ncol = 3)
+
+```
+
+
+Re-coding the `aircraft` from character variable to factor
+
+```{r}
+#Code "Boeing" as 1 and "Airbus" as 0
+levels(faa_data_cleaned$aircraft) <- c(1,2)
+
+faa_data_cleaned$aircraft <- as.numeric(levels(faa_data_cleaned$aircraft))[faa_data_cleaned$aircraft]
+
+summary(faa_data_cleaned)
+
+cor_with_dist <- round(cor(faa_data_cleaned$distance, faa_data_cleaned[,1:7],use = "pairwise.complete.obs"),2)
+
+cor_with_dist
+
+scatter1 <- ggplot(faa_data_cleaned, aes( x = duration, y = distance)) + geom_point()
+scatter2 <- ggplot(faa_data_cleaned, aes( x = no_pasg, y = distance)) + geom_point()
+scatter3 <- ggplot(faa_data_cleaned, aes( x = speed_ground, y = distance)) + geom_point()
+scatter4 <- ggplot(faa_data_cleaned, aes( x = speed_air, y = distance)) + geom_point()
+scatter5 <- ggplot(faa_data_cleaned, aes( x = height, y = distance)) + geom_point()
+scatter6 <- ggplot(faa_data_cleaned, aes( x = pitch, y = distance)) + geom_point()
+scatter7 <- ggplot(faa_data_cleaned, aes( x = aircraft, y = distance)) + geom_point()
+
+grid.arrange(scatter1,scatter2,scatter3, scatter4, scatter5, scatter6, scatter7,nrow = 3, ncol = 3)
+
+
+```
+
+
+***
+
+### Simple Regression - single factor each time
+
+```{r}
+
+linear_model1 <- lm(distance ~ aircraft, data = faa_data_cleaned)
+#summary(linear_model1)  #p-value = 4.38e-12
+
+linear_model2 <- lm(distance ~ duration, data = faa_data_cleaned)
+#summary(linear_model2)  #p-value = 0.146
+
+linear_model3 <- lm(distance ~ no_pasg, data = faa_data_cleaned)
+#summary(linear_model3)  #p-value = 0.618
+
+linear_model4 <- lm(distance ~ speed_ground, data = faa_data_cleaned)
+#summary(linear_model4)  #p-value = <2e-16
+
+linear_model5 <- lm(distance ~ speed_air, data = faa_data_cleaned)
+#summary(linear_model5)  #p-value = <2e-16
+
+linear_model6 <- lm(distance ~ height, data = faa_data_cleaned)
+#summary(linear_model6)  #p-value = 0.00389
+
+linear_model7 <- lm(distance ~ pitch, data = faa_data_cleaned)
+#summary(linear_model7)  #p-value = 0.0127
+
+
+#With all the variables
+linear_model <- lm(distance ~ ., data = faa_data_cleaned)
+summary(linear_model)   ##Aircraft, speed_air, height
+
+```
+
+***
+
+### Simple Regression - using standardized variables
+
+```{r}
+
+stnd_var <- function(var)
+{
+  var <- (var-mean(var,na.rm = T))/sd(var,na.rm = T)
+}
+
+faa_data_stnd <- sapply(faa_data_cleaned,stnd_var)
+#head(faa_data_stnd)
+
+faa_data_stnd <- as.data.frame(faa_data_stnd, row.names = NULL)
+
+cor_with_dist_stnd <- round(cor(faa_data_stnd$distance, faa_data_stnd[,1:7],use = "pairwise.complete.obs"),2)
+
+
+cor_with_dist_stnd
+
+```
+
+
+**From the correlation values and the results of the simple regression analysis we see that following are the significant variables - **
+
+    1. speed_air
+    2. speed_ground
+    3. aircraft
+    4. height
+    5. duration
+    6. pitch
+    7. no_pasg
+
+
+***
+
+#### Checking for collinearity
+
+We will compare the regression coefficients of the three models below:
+Model 1: LD ~ Speed_ground
+Model 2: LD ~ Speed_air
+Model 3: LD ~ Speed_ground + Speed_air
+
+to check for the correlation between Speed_ground and Speed_air. 
+
+```{r}
+model1 <- lm(distance~speed_ground, data = faa_data_cleaned, na.action = na.omit)
+summary(model1)
+
+model2 <- lm(distance~speed_air, data = faa_data_cleaned)
+summary(model2)
+
+model3 <- lm(distance~speed_ground + speed_air, data = faa_data_cleaned)
+summary(model3)
+```
+
+
+We see that speed_ground has changed sign to negative. Also, it has become insignificant. 
+
+**Since the correlation between speed_ground and speed_air is very high. We would want to retain speed_ground**
+
+***
+
+**Based on the results we observe following variables are significant in predicting landing distance:**
+**(variables arranged in decreasing order of significance)**
+
+    1. speed_ground
+    2. aircraft
+    3. height
+    4. duration
+    5. pitch
+    6. no_pasg
+
+
+We will fit the following six models:
+Model 1: LD ~ X1
+Model 2: LD ~ X1 + X2
+Model 3: LD ~ X1 + X2 + X3
+....
+
+where X1, X2... are predictors arranged in decreaasing order of significance
+
+```{r, message=FALSE, error=FALSE, warning=FALSE}
+rsquared <- NULL
+
+model1 <- lm(distance~speed_ground, data = faa_data_cleaned)
+rsquared[1] <- summary(model1)$r.squared
+
+model2 <- lm(distance~speed_ground + aircraft, data = faa_data_cleaned)
+rsquared[2] <- summary(model2)$r.squared
+
+model3 <- lm(distance~speed_ground + aircraft + height, data = faa_data_cleaned)
+rsquared[3] <- summary(model3)$r.squared
+
+model4 <- lm(distance~speed_ground + aircraft + height + duration, data = faa_data_cleaned)
+rsquared[4] <- summary(model4)$r.squared
+
+model5 <- lm(distance~speed_ground + aircraft + height + duration + pitch, data = faa_data_cleaned)
+rsquared[5] <- summary(model5)$r.squared
+
+model6 <- lm(distance~speed_ground + aircraft + height + duration + pitch + no_pasg, data = faa_data_cleaned)
+rsquared[6] <- summary(model6)$r.squared
+```
+
+**We will not plot the variation of R-squared against number of predictors(p)**
+```{r}
+plot(1:6, rsquared,type = 'b', main = 'Variation of R-sqaured against number of predictors (p)')
+```
+
+
+***
+
+**Instead of R-squared, lets determine the `adjusted R-sqaured` value and observe its pattern against number of predictors**
+```{r, message=FALSE, error=FALSE, warning=FALSE}
+adj_rsquared <- NULL
+
+adj_rsquared[1] <- summary(model1)$adj.r.squared
+adj_rsquared[2] <- summary(model2)$adj.r.squared
+adj_rsquared[3] <- summary(model3)$adj.r.squared
+adj_rsquared[4] <- summary(model4)$adj.r.squared
+adj_rsquared[5] <- summary(model5)$adj.r.squared
+adj_rsquared[6] <- summary(model6)$adj.r.squared
+```
+
+
+```{r}
+plot(1:6, adj_rsquared, type = "b", main = 'Variation of adjusted R-sqaured against number of predictors (p)')
+```
+
+
+***
+
+**Determining the pattern of AIC against number of predictors p**
+```{r, message=FALSE, error=FALSE, warning=FALSE}
+aic <- NULL
+
+aic[1] <- AIC(model1)
+aic[2] <- AIC(model2)
+aic[3] <- AIC(model3)
+aic[4] <- AIC(model4)
+aic[5] <- AIC(model5)
+aic[6] <- AIC(model6)
+```
+
+
+```{r}
+plot(1:6, aic, type = 'b', main = 'Variation of AIC against number of predictors (p)')
+```
+
+**From the above 3 plots, it is appropriate to select speed_ground, aircraft make and height to build the final model.**
+
+*Adding more variables will increase the complexity of the model and will provide any additional information to the model*
+
+***
+
+### Variable selection - Forward StepAIC
+
+```{r}
+full_model <- lm(distance ~ .-speed_air , data = faa_data_cleaned)
+
+step.model <- stepAIC(full_model, direction = "forward", 
+                      trace = FALSE)
+summary(step.model)
+
+```
+
+```{r}
+#Final model
+
+final_model <- lm(distance ~ aircraft + speed_ground + height, data = faa_data_cleaned)
+summary(final_model)
+```
+
