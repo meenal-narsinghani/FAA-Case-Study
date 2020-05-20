@@ -2,14 +2,14 @@
 
 ---
 
-### Motivation: 
+#### Motivation: 
 To reduce the risk of landing overrun
-### Goal: 
+#### Goal: 
 To study what factors and how they would impact the landing distance of a commercial flight
-### Data Source: 
+#### Data Source: 
 Landing data from 950 commerical flights
-See the 2 excel files: **[FAA-1.xls]**(FAA1.xls) (800 flights) and **FAA-2.xls**(FAA2.xls) (150 flights)
-##### View the R Notebook [here](https://meenal-narsinghani.github.io/FAA-Case-Study/FAADataAnalysis%20-%20Part1.html)
+See the 2 excel files: **[FAA-1.xls](FAA1.xls)** (800 flights) and **[FAA-2.xls](FAA2.xls)** (150 flights)
+#### View the R Notebook [here](https://meenal-narsinghani.github.io/FAA-Case-Study/FAADataAnalysis%20-%20Part1.html)
 
 ---
 
