@@ -22,7 +22,7 @@ See the 2 excel files: **[FAA-1.xls](FAA1.xls)** (800 flights) and **[FAA-2.xls]
 
 ##### Variable dictionary:
 
-- Aircraft: The make of an aircraft (Boeing or Airbus).
+- * **Aircraft** *: The make of an aircraft (Boeing or Airbus).
 Duration (in minutes): Flight duration between taking off and landing. The duration of a normal flight should always be greater than 40min.
 - No_pasg: The number of passengers in a flight.
 - Speed_ground (in miles per hour): The ground speed of an aircraft when passing over the threshold of the runway. If its value is less than 30MPH or greater than 140MPH, then the landing would be considered as abnormal.
