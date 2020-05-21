@@ -1,8 +1,8 @@
-# FAA Case Sutdy - Part 1
+## FAA Case Sutdy - Part 1
 ### Model flight landing distance
 ---
 
-#### View the R Notebook [here](https://meenal-narsinghani.github.io/FAA-Case-Study/FAADataAnalysis%20-%20Part1.html)
+### View the R Notebook [here](https://meenal-narsinghani.github.io/FAA-Case-Study/FAADataAnalysis%20-%20Part1.html)
 
 ---
 #### Background:
@@ -33,7 +33,7 @@ Duration (in minutes): Flight duration between taking off and landing. The durat
 
 #### Analytical Approach:
 
-A structred analytical approach comprising of the steps mentioned below was followed to model the ***flight landing distance***
+A structured analytical approach comprising of the steps mentioned below was followed to model the ***flight landing distance***
 
 1. Initial Setup & Analytical Dataset creation
 2. Exploratory Data Analysis
