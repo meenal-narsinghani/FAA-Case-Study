@@ -20,7 +20,7 @@ To study what factors and how they would impact the landing distance of a commer
 Landing data (simulated) from 950 commerical flights
 See the 2 excel files: **[FAA-1.xls](FAA1.xls)** (800 flights) and **[FAA-2.xls](FAA2.xls)** (150 flights)
 
-##### Variable dictionary:
+#### Variable dictionary:
 
 - ***Aircraft:*** The make of an aircraft (Boeing or Airbus).
 Duration (in minutes): Flight duration between taking off and landing. The duration of a normal flight should always be greater than 40min.
@@ -32,6 +32,17 @@ Duration (in minutes): Flight duration between taking off and landing. The durat
 2
 - ***Distance (in feet):*** The landing distance of an aircraft. More specifically, it refers to the distance between the threshold of the runway and the point where the aircraft can be fully stopped. The length of the airport runway is typically less than 6000 feet.
 
+#### Analytical Approach:
+
+A structred analytical approach comprising of the steps mentioned below was followed to model the ***flight landing distance***
+
+1. Initial Setup & Analytical Dataset creation
+2. Exploratory Data Analysis
+3. Factor Analysis
+4. Variable Selection & Model Implementation
+  * Simple Linear Regression
+  * Multiple Linear Regression
+  * Forward StepAIC Regression
 
 
 
